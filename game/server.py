@@ -6,6 +6,7 @@ Project: OnlineGame
 """
 import socket
 from _thread import start_new_thread
+import pickle
 import sys
 
 # Local ipv4ish (Server adress)
@@ -30,8 +31,8 @@ def threaded_client(conn):
 
     while True:
         try:
-            data = conn.recv(2048)
-            reply = data.decode("utf-8")
+            raw_data = conn.recv(2048)
+            data = pickle.loads(raw_data)
 
             if not data:
                 print('Disconnected')
@@ -39,17 +40,17 @@ def threaded_client(conn):
 
             else:
                 # Print aquired data
-                print('Recived: ', reply)
-                print('Sending: ', reply)
+                print('Recived: ', data)
+                print('Sending: ', data)
 
-            conn.sendall(str.encode(reply))
+            conn.sendall(raw_data)
 
         except Exception as e:
             print(e)
             print('Disconnected')
             break
 
-
+connected_clients = []
 player = 0
 while True:
     # conn is a socket object?

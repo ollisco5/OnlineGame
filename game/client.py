@@ -8,6 +8,7 @@ Project: OnlineGame
 import socket
 import pygame
 import sys
+import pickle
 
 # serveraddress = socket.gethostbyname('localhost')
 serveraddress = '192.168.43.7'  # IP för säpo bevakningsbil
@@ -25,7 +26,6 @@ while True:
     p += 1"""
 
 pygame.init()
-
 screen = pygame.display.set_mode((400, 400))
 pygame.display.set_caption('SPELET')
 clock = pygame.time.Clock()
@@ -37,14 +37,20 @@ GREEN = (0, 200, 0)
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, identification):
         pygame.sprite.Sprite.__init__(self)
         self.width = 40
+
+        self.id = identification
 
         self.image = pygame.Surface((self.width, self.width))
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
-        self.pos = [50, 50]
+        if playerid == 0:
+            self.pos = [50, 50]
+        else:
+            self.pos = [200, 200]
+
         self.speed = 5
 
     def update(self):
@@ -65,18 +71,26 @@ class Player(pygame.sprite.Sprite):
             self.pos[1] += self.speed
 
         self.rect = self.pos
+        data_to_send = [self.id, self.pos[0], self.pos[1]]
+        data_to_send = pickle.dumps(data_to_send)
+        s.send(data_to_send)
+
 
         # SKicka Player + pos
 
+def get_server_data():
+    raw_data = s.recv(2048)
+    data = pickle.loads(raw_data)
+    return data
 
-def setup():
+def setup(playerid):
     players = pygame.sprite.Group()
-    player = Player()
+    player = Player(playerid)
     players.add(player)
     return players
 
 
-def main(players):
+def main(playerid, players):
     running = True
     while running:
         clock.tick(FPS)
@@ -89,6 +103,7 @@ def main(players):
         # Update
         players.update()
 
+
         # Draw
 
         screen.fill(WHITE)
@@ -98,11 +113,15 @@ def main(players):
 
 
 if __name__ == '__main__':
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((serveraddress, port))
-    data = s.recv(1024)
-    player = data.decode("utf-8")
-    print(player)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((serveraddress, port))
+        data = s.recv(512)
+        playerid = data.decode("utf-8")
+        print(playerid)
 
-    """players = setup()
-    main(players)"""
+        players = setup(playerid)
+        main(playerid, players)
+    except Exception as e:
+        print(e)
+
